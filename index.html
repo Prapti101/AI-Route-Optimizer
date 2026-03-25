@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Delivery Route Optimizer</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- Animated background grid -->
+  <div class="bg-grid"></div>
+  <div class="bg-scanline"></div>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="logo-icon"><i class="fas fa-route"></i></div>
+      <div class="header-titles">
+        <h1 class="app-title">AI ROUTE<span class="accent">OPTIMIZER</span></h1>
+        <p class="app-subtitle">Travelling Salesman Problem · Real-World Delivery Intelligence</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="status-badge" id="statusBadge">
+        <span class="pulse-dot"></span>
+        <span id="statusText">READY</span>
+      </div>
+      <div class="header-toggles">
+        <label class="toggle-switch" title="Show/Hide Random Route">
+          <input type="checkbox" id="toggleRandom" checked />
+          <span class="toggle-slider"></span>
+          <span class="toggle-label">Random Route</span>
+        </label>
+        <label class="toggle-switch" title="Simulation Mode">
+          <input type="checkbox" id="toggleSimulation" checked />
+          <span class="toggle-slider"></span>
+          <span class="toggle-label">Sim Mode</span>
+        </label>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <main class="app-layout">
+
+    <!-- LEFT PANEL: Controls -->
+    <aside class="panel panel-left">
+      <div class="panel-header"><i class="fas fa-sliders-h"></i> CONTROL CENTER</div>
+
+      <div class="control-section">
+        <p class="control-hint"><i class="fas fa-mouse-pointer"></i> Click the map to add locations.<br>First click = <span class="hl-yellow">Warehouse</span> · Next = <span class="hl-blue">Delivery Stops</span></p>
+
+        <div class="input-group">
+          <label>Start From</label>
+          <select id="startSelect">
+            <option value="0">Warehouse (Default)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="control-section btn-grid">
+        <button class="ctrl-btn btn-primary" id="btnOptimize">
+          <i class="fas fa-brain"></i>
+          <span>Optimize Route</span>
+        </button>
+        <button class="ctrl-btn btn-secondary" id="btnCompare">
+          <i class="fas fa-code-branch"></i>
+          <span>Compare Routes</span>
+        </button>
+        <button class="ctrl-btn btn-simulate" id="btnSimulate">
+          <i class="fas fa-truck"></i>
+          <span>Start Simulation</span>
+        </button>
+        <button class="ctrl-btn btn-random" id="btnRandom">
+          <i class="fas fa-dice"></i>
+          <span>Random Locations</span>
+        </button>
+        <button class="ctrl-btn btn-clear" id="btnClear">
+          <i class="fas fa-trash-alt"></i>
+          <span>Clear Map</span>
+        </button>
+      </div>
+
+      <!-- Step-by-step panel -->
+      <div class="panel-header mt-20"><i class="fas fa-list-ol"></i> DELIVERY STEPS</div>
+      <div class="steps-panel" id="stepsPanel">
+        <div class="step-item step-idle" id="step-0">
+          <span class="step-num">1</span>
+          <span class="step-text">Start at Warehouse</span>
+        </div>
+        <div class="step-item step-idle" id="step-1">
+          <span class="step-num">2</span>
+          <span class="step-text">Go to nearest location</span>
+        </div>
+        <div class="step-item step-idle" id="step-2">
+          <span class="step-num">3</span>
+          <span class="step-text">Deliver package</span>
+        </div>
+        <div class="step-item step-idle" id="step-3">
+          <span class="step-num">4</span>
+          <span class="step-text">Continue to all locations</span>
+        </div>
+        <div class="step-item step-idle" id="step-4">
+          <span class="step-num">5</span>
+          <span class="step-text">Return to Warehouse</span>
+        </div>
+      </div>
+
+      <!-- Dynamic delivery log -->
+      <div class="panel-header mt-20"><i class="fas fa-terminal"></i> DELIVERY LOG</div>
+      <div class="delivery-log" id="deliveryLog">
+        <div class="log-entry log-info">System initialized. Click map to add stops.</div>
+      </div>
+    </aside>
+
+    <!-- CENTER: Map -->
+    <section class="map-container">
+      <div id="map"></div>
+      <div class="map-overlay-hint" id="mapHint">
+        <i class="fas fa-map-marker-alt fa-2x"></i>
+        <p>Click anywhere on the map to place your <strong>Warehouse</strong> and delivery stops</p>
+      </div>
+    </section>
+
+    <!-- RIGHT PANEL: Stats + Info -->
+    <aside class="panel panel-right">
+      <div class="panel-header"><i class="fas fa-chart-bar"></i> STATISTICS</div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon"><i class="fas fa-map-marker-alt"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Total Locations</div>
+            <div class="stat-value" id="statLocations">0</div>
+          </div>
+        </div>
+        <div class="stat-card stat-green">
+          <div class="stat-icon"><i class="fas fa-route"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Optimized Distance</div>
+            <div class="stat-value" id="statOptDist">—</div>
+            <div class="stat-unit">km</div>
+          </div>
+        </div>
+        <div class="stat-card stat-red">
+          <div class="stat-icon"><i class="fas fa-random"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Random Distance</div>
+            <div class="stat-value" id="statRandDist">—</div>
+            <div class="stat-unit">km</div>
+          </div>
+        </div>
+        <div class="stat-card stat-gold">
+          <div class="stat-icon"><i class="fas fa-percentage"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Distance Saved</div>
+            <div class="stat-value" id="statSaved">—</div>
+            <div class="stat-unit">%</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon"><i class="fas fa-microchip"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Algorithm</div>
+            <div class="stat-value stat-value-sm" id="statAlgo">Nearest Neighbor</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon"><i class="fas fa-clock"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Compute Time</div>
+            <div class="stat-value" id="statTime">—</div>
+            <div class="stat-unit">ms</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Distance matrix mini display -->
+      <div class="panel-header mt-20"><i class="fas fa-th"></i> ROUTE SEQUENCE</div>
+      <div class="route-sequence" id="routeSequence">
+        <span class="seq-empty">Run optimization to see route</span>
+      </div>
+
+      <!-- TSP Info Section -->
+      <div class="panel-header mt-20"><i class="fas fa-graduation-cap"></i> ABOUT TSP</div>
+      <div class="tsp-info">
+        <div class="info-block">
+          <div class="info-title"><i class="fas fa-question-circle"></i> What is TSP?</div>
+          <p>The <strong>Travelling Salesman Problem</strong> asks: given N cities, what is the shortest route that visits each city exactly once and returns to the origin?</p>
+        </div>
+        <div class="info-block">
+          <div class="info-title"><i class="fas fa-infinity"></i> Why NP-Hard?</div>
+          <p>There are <strong>(N-1)!/2</strong> possible routes. For just 20 cities, that's ~60 quadrillion combinations — brute force is computationally impossible.</p>
+        </div>
+        <div class="info-block">
+          <div class="info-title"><i class="fas fa-bolt"></i> Nearest Neighbor</div>
+          <p>A <strong>greedy heuristic</strong> that always goes to the closest unvisited node. Runs in O(N²) — fast and gives ~20–25% of optimal, perfect for real-time use.</p>
+        </div>
+        <div class="info-block">
+          <div class="info-title"><i class="fas fa-globe"></i> Real-World Use</div>
+          <p>Used by <strong>Amazon, FedEx, Swiggy, Zomato</strong> and logistics giants daily to save millions in fuel costs and delivery time.</p>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Leaflet JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="js/script.js"></script>
+</body>
+</html>
